@@ -1,9 +1,39 @@
 """
 Added a copy_view context manager inspired from stackoverflow.
 """
-import contextlib
 import numpy as np
 from dataclasses import dataclass
+
+from src.copy_view import copy_view
+
+london_age_buckets = {
+    '0 <= age < 10': 1074304.0,
+    '10 <= age < 20': 928524.0,
+    '20 <= age < 30': 1462938.0,
+    '30 <= age < 40': 1460934.0,
+    '40 <= age < 50': 1166676.0,
+    '50 <= age < 60': 833226.0,
+    '60 <= age < 70': 599362.0,
+    '70 <= age < 80': 393117.0,
+    '80 <= age': 212404.0 + 42456.0
+}
+
+# From South Korea which has tested more people indiscriminately
+fatality_prob_by_age_buckets = {
+    '0 <= age < 10': 0,
+    '10 <= age < 20': 0,
+    '20 <= age < 30': 0,
+    '30 <= age < 40': 0.12,
+    '40 <= age < 50': 0.09,
+    '50 <= age < 60': 0.37,
+    '60 <= age < 70': 1.55,
+    '70 <= age < 80': 5.38,
+    '80 <= age': 10.22
+}
+
+assert fatality_prob_by_age_buckets.keys() == london_age_buckets.keys()
+
+np_fatality_prob_by_age_bucket = np.array(list(fatality_prob_by_age_buckets.values())) / 100
 
 FATALITY_RATE = 0.01
 INTERACTION_COUNT = 10
@@ -15,25 +45,19 @@ STATE_DEAD = 2
 STATE_IMMUNE = 3
 
 person_dtype = np.dtype(
-    [('state', np.int8), ('remaining_days', np.int8)]
+    [('state', np.int8), ('age_bucket', np.int8), ('remaining_days', np.int8)]
 )
-
-
-@contextlib.contextmanager
-def copy_view(arr, inds):
-    # create copy from fancy inds
-    arr_copy = arr[inds]
-
-    # yield 'view' (copy)
-    yield arr_copy
-
-    # after context, save modified data
-    arr[inds] = arr_copy
 
 
 def create_population(population_size):
     population = np.recarray(population_size, person_dtype)
     population.state = STATE_NOT_INFECTED
+
+    age_distribution = np.array(list(london_age_buckets.values()))
+    age_distribution = age_distribution / np.sum(age_distribution)
+
+    population.age_bucket = np.random.choice(len(age_distribution), size=population_size, replace=True,
+                                             p=age_distribution)
     population.remaining_days = 0
     return population
 
@@ -55,7 +79,8 @@ def integrate(population):
         infected.remaining_days -= 1
 
         with copy_view(infected, infected.remaining_days == 0) as post_infected:
-            die = 0 != np.random.binomial(1, FATALITY_RATE, len(post_infected))
+            post_infected_fatality_prob = np_fatality_prob_by_age_bucket[post_infected.age_bucket]
+            die = 0 != np.random.binomial(1, post_infected_fatality_prob)
             post_infected.state = STATE_IMMUNE
             post_infected.state[np.where(die)] = STATE_DEAD
 
@@ -94,4 +119,4 @@ for t in range(48):
     integrate(population)
     print(compute_stats(population))
 
-#print(population)
+# print(population)
