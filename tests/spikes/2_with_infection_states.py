@@ -140,12 +140,14 @@ def integrate_infected(infected):
             mark_immune.infection_state = INFECTION_STATE_INVALID
             mark_immune.contagion_state = CONTAGION_STATE_INVALID
             mark_immune.health_state = PERSON_HEALTH_STATE_IMMUNE
+
     with copy_view(infected,
                    np.logical_and(infected.infection_state == INFECTION_STATE_INCUBATION, infected.infection_remaining_days == 0)) as mark_symptomatic:
         mark_symptomatic.infection_state = INFECTION_STATE_SYMPTOMATIC
 
         # TODO: how long does it take until one is healed? pulled out my hat again
         mark_symptomatic.infection_remaining_days = draw_int_lognormal(10.5, 3.6, len(mark_symptomatic))
+
     with copy_view(infected, np.logical_and(infected.infection_state == INFECTION_STATE_SYMPTOMATIC,
                                             infected.infection_remaining_days == 0)) as mark_immune_or_die:
         mark_immune_or_die_fatality_prob = np_fatality_by_age_prob[mark_immune_or_die.age_bucket]
@@ -154,6 +156,7 @@ def integrate_infected(infected):
         mark_immune_or_die.health_state[np.where(die)] = PERSON_HEALTH_STATE_DEAD
         mark_immune_or_die.infection_state = INFECTION_STATE_INVALID
         mark_immune_or_die.contagion_state = CONTAGION_STATE_INVALID
+
     with copy_view(infected, np.isin(infected.infection_state, (INFECTION_STATE_INCUBATION, INFECTION_STATE_SYMPTOMATIC))) as contagion_step:
         contagion_step.contagion_remaining_days -= 1
 
