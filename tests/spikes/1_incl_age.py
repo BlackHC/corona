@@ -24,6 +24,8 @@ STATE_INFECTED = 1
 STATE_DEAD = 2
 STATE_IMMUNE = 3
 
+
+# Remaining days: until state change
 person_dtype = np.dtype(
     [('state', np.int8), ('age_bucket', np.int8), ('remaining_days', np.int8)]
 )
