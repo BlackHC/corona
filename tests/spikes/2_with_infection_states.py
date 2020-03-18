@@ -4,7 +4,7 @@ Added a copy_view context manager inspired from stackoverflow.
 import numpy as np
 from dataclasses import dataclass
 
-from src.copy_view import copy_view
+from copy_view import copy_view
 
 from data.london_population_by_age import population_by_age
 from data.south_korea_fatality_by_age import fatality_by_age
